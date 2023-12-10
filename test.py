@@ -3,11 +3,11 @@ from InterpreterVisitor import ProgramInterpreterVisitor
 program_str = """program{
 a = -1 * 2
 c = 2
-if (a == 2 and c >= 1)
+if (a == 2 or c >= 1)
 {
 r1 = request(sub, obj, act)
 }
-elif (a == -2)
+if (a == -2)
 {
 r2 = request(sub, dom , act)
 }
