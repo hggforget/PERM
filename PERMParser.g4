@@ -3,78 +3,109 @@ options {
     tokenVocab=PERMLexer;
 }
 
-tigerProgram : KeywordMain KeywordLet declSegment KeywordIn KeywordBegin stmtList KeywordEnd;
+program
+    : PROGRAM (NEWLINE)? suite
+    ;
 
-declSegment: (typeDecl | varDecl | funcDecl)*;
+suite
+    : LR_BRACE (NEWLINE)* block((NEWLINE)* block)* (NEWLINE)* RR_BRACE
+    ;
 
-typeDecl: KeywordType ID Equals type Semicolon;
-type: typeId
-    | KeywordArray LBracket IntLit RBracket KeywordOf typeId
-    | ID;
-typeId: KeywordInt | KeywordFloat;
 
-varDecl: KeywordVar idList Colon type optionalInit Semicolon;
-idList: ID (Comma ID)*;
-optionalInit: | OpAssign constant;
+ifStmt
+    : IF conditionStmt ((NEWLINE)?  ELSEIF conditionStmt)* ((NEWLINE)? ELSE (NEWLINE)? else=suite)?
+    ;
 
-funcDecl: KeywordFunction ID LParen paramList RParen (retType)? KeywordBegin stmtList KeywordEnd Semicolon;
-paramList: | param (Comma param)*;
+conditionStmt
+    : condition (NEWLINE)? suite
+    ;
 
-retType: Colon type;
-param: ID Colon type;
+condition
+    : LR_BRACKET expr RR_BRACKET
+    ;
 
-stmtList: (stmt)*;
-stmt: ifStmt
-    | assignStmt
-    | callStmt
-    | whileStmt
-    | forStmt
-    | breakStmt
-    | returnStmt
-    | letStmt;
+assignStmt
+    : compound_identifier OpAssign primitive
+    | compound_identifier OpAssign expr
+    ;
 
-letStmt: KeywordLet declSegment KeywordIn stmtList KeywordEnd Semicolon;
-returnStmt: KeywordReturn expr Semicolon;
-breakStmt: KeywordBreak Semicolon;
-forStmt: KeywordFor ID OpAssign expr KeywordTo expr KeywordDo stmtList KeywordEnddo Semicolon;
-whileStmt: KeywordWhile expr KeywordDo stmtList KeywordEnddo Semicolon;
-assignStmt: lvalue OpAssign rValue;
-rValue: expr Semicolon;
-callStmt: (lvalue OpAssign)? ID LParen exprList RParen Semicolon;
+block
+    : expr                                                      # StmtExpr
+    | ifStmt                                                    # StmtIf
+    | assignStmt                                                # StmtAssign
+//   | forStmt
+    ;
 
-ifStmt: KeywordIf expr KeywordThen stmtList ifStmtTail;
-ifStmtTail: KeywordEndif Semicolon
-    | KeywordElse stmtList KeywordEndif Semicolon;
+expr
+    : function                                                  # ExprFunc
+    | LR_BRACKET expr RR_BRACKET                                # ExprBracket
+    | compound_identifier                                       # ExprIdentifier
+    | left=expr comparisonOperator right=expr                   # ExprComparison
+    | NOT expr                                                  # ExprLogicalNot
+    | left=expr op=AND right=expr                               # ExprLogicalBinary
+    | left=expr op=OR  right=expr                               # ExprLogicalBinary
+    | op=(ADD|SUB|TILDE) valueExpr=expr                         # ExprArithmeticUnary
+    | left=expr op=(STAR|DIV|MOD) right=expr                    # ExprArithmeticBinary
+    | left=expr op=(ADD|SUB) right=expr                         # ExprArithmeticBinary
+    | literal                                                   # ExprLiteral
+    | policyAction                                              # ExprPolicyAction
+    ;
 
-expr: orTerm;
 
-orTerm: andTerm (BinOpOr andTerm)*;
-andTerm: leTerm (BinOpAnd leTerm)*;
-leTerm: geTerm (BinOpLeq geTerm)*;
-geTerm: ltTerm (BinOpGeq ltTerm)*;
-ltTerm: gtTerm (BinOpLt gtTerm)*;
-gtTerm: neTerm (BinOpGt neTerm)*;
-neTerm: eqTerm (BinOpNeq eqTerm)*;
-eqTerm: subTerm (BinOpEq subTerm)*;
-subTerm: addTerm (BinOpMinus addTerm)*;
-addTerm: divTerm(BinOpPlus divTerm)*;
-divTerm: mulTerm (BinOpDivide mulTerm)*;
-mulTerm: parnTerm (BinOpTimes parnTerm)*;
+comparisonOperator
+    : EQ | NEQ | LT | LTE | GT | GTE
+    ;
 
-parnTerm: (LParen expr RParen) | lvalue | constant;
+function
+    : function_name function_arguments                  #FunctionCall
+    ;
 
-//expr: constant exprTail
-//    | lvalue exprTail
-//    | LParen expr RParen exprTail;
-//exprTail: BinOpPlus highExpr | highExpr;
-//
-//highExpr: BinOpPower expr | expr ;
+primitive
+    : primitive_name primitive_arguments                        #StmtPrimitive
+    ;
 
-//exprTail: | binaryOperator expr;
+primitive_name
+    : REQUEST | POLICY | EFFECT | MATCHER
+    ;
 
-constant: IntLit | FloatLit;
+primitive_arguments
+    : LR_BRACKET ( expr ( COMMA expr )* )? RR_BRACKET   #PrimitiveArguments
+    ;
 
-exprList: | expr (Comma expr)*;
+function_arguments
+    : LR_BRACKET ( expr ( COMMA expr )* )? RR_BRACKET   #FunctionArguments
+    ;
 
-lvalue: ID (LBracket expr RBracket)?;
+function_name
+    : identifier;
 
+compound_identifier
+    : identifier DOT identifier
+    | identifier
+    ;
+
+identifier
+    : IDENTIFIER
+    ;
+
+
+literal
+    : number                                    # NUMBER
+    | STRING                                    # STR
+    | boolean                                   # BOOL
+;
+
+policyAction
+    : ALLOW                                     # ActionAllow
+    | DENY                                      # ActionDeny
+    ;
+
+boolean
+    :TRUE
+    |FALSE;
+
+number
+	: op=SUB? INTEGER   # INT
+	| op=SUB? FLOAT # FLOAT
+	| op=SUB? DOT_STARTING_FLOAT # FLOAT
+;
