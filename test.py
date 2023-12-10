@@ -16,7 +16,13 @@ p = policy(sub, obj, act)
 
 e = effect(some(where (p.eft == allow)))
 
-m = matcher(r1.sub == p.sub and r1.obj == p.obj and r1.act == p.act)
+m1 = matcher(r1.sub == p.sub and r1.obj == p.obj and r1.act == p.act)
+
+if (r2)
+{
+m2 = matcher(r2.sub == p.sub and r2.obj == p.obj and r2.act == p.act)
+}
+
 }
 
 """

@@ -155,7 +155,10 @@ class ProgramInterpreterVisitor(ProgramCommonVisitor):
             return left_result <= right_result
 
     def visitExprIdentifier(self, ctx: PERMParser.ExprIdentifierContext):
-        return self.variables[ctx.getText()]
+        key = ctx.getText()
+        for variable_set in [self.variables, self.requests, self.effect, self.policy, self.matchers]:
+            if variable_set.get(key, ''):
+                return variable_set[key]
 
     def get_primitive_name(self, ctx: PERMParser.StmtPrimitiveContext):
         function_name = ctx.primitive_name()
